@@ -679,9 +679,12 @@ export default function Home() {
       </div>
 
       {/* ── Footer ─────────────────────────────────────── */}
-      <footer className="px-6 py-8 text-center border-t border-white/5">
+      <footer className="px-6 py-8 text-center border-t border-white/5 space-y-2">
         <p className="text-sm text-text-muted">
           브라우저에서 처리되므로 파일이 외부로 전송되지 않습니다
+        </p>
+        <p className="text-xs text-text-muted/60">
+          Powered by <a href="https://github.com/nickvdyck/ffmpeg-wasm-demo" className="underline hover:text-text-muted transition-colors" target="_blank" rel="noopener noreferrer">FFmpeg.wasm</a> (LGPL-2.1) &middot; <a href="https://www.ffmpeg.org/legal.html" className="underline hover:text-text-muted transition-colors" target="_blank" rel="noopener noreferrer">FFmpeg License</a>
         </p>
       </footer>
     </main>
