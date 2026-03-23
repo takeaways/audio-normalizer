@@ -55,9 +55,11 @@ export default function Home() {
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "mp3";
       const baseName = file.name.replace(/\.[^.]+$/, "");
+      const isVideo = ["mp4", "mov", "mkv", "avi", "webm"].includes(ext);
       const inputName = `input.${ext}`;
-      const tempName = `temp.mp3`;
-      const outputName = `output.mp3`;
+      const outExt = isVideo ? ext : "mp3";
+      const tempName = `temp.${outExt}`;
+      const outputName = `output.${outExt}`;
 
       setFileName(file.name);
       setStatus("loading");
@@ -76,18 +78,18 @@ export default function Home() {
         const uint8Array = new Uint8Array(arrayBuffer);
         await ffmpeg.writeFile(inputName, uint8Array);
 
+        // 코덱 설정: 비디오는 영상 복사 + 오디오만 처리
+        const audioCodec = isVideo ? ["-c:a", "aac", "-b:a", "192k"] : ["-c:a", "libmp3lame", "-q:a", "2"];
+        const videoCodec = isVideo ? ["-c:v", "copy"] : [];
+
         // Step 1: 컴프레서 + 리미터
         setProgressText("1단계: 소리 크기를 균일하게 맞추고 있습니다...");
         setProgress(10);
         await ffmpeg.exec([
-          "-i",
-          inputName,
-          "-af",
-          "acompressor=threshold=-20dB:ratio=4:attack=10:release=200:makeup=2,alimiter=limit=-1.5dB:level=false",
-          "-c:a",
-          "libmp3lame",
-          "-q:a",
-          "2",
+          "-i", inputName,
+          ...videoCodec,
+          "-af", "acompressor=threshold=-20dB:ratio=4:attack=10:release=200:makeup=2,alimiter=limit=-1.5dB:level=false",
+          ...audioCodec,
           tempName,
         ]);
 
@@ -95,25 +97,22 @@ export default function Home() {
         setProgressText("2단계: 유튜브 표준 볼륨에 맞추고 있습니다...");
         setProgress(55);
         await ffmpeg.exec([
-          "-i",
-          tempName,
-          "-af",
-          "loudnorm=I=-16:TP=-1.5:LRA=11",
-          "-c:a",
-          "libmp3lame",
-          "-q:a",
-          "2",
+          "-i", tempName,
+          ...videoCodec,
+          "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+          ...audioCodec,
           outputName,
         ]);
 
         setProgressText("완료 파일을 준비하고 있습니다...");
         setProgress(90);
         const data = await ffmpeg.readFile(outputName);
-        const blob = new Blob([new Uint8Array(data)], { type: "audio/mpeg" });
+        const mimeType = isVideo ? `video/${ext}` : "audio/mpeg";
+        const blob = new Blob([new Uint8Array(data)], { type: mimeType });
         const url = URL.createObjectURL(blob);
 
         setDownloadUrl(url);
-        setDownloadName(`${baseName}_normalized.mp3`);
+        setDownloadName(`${baseName}_normalized.${outExt}`);
         setProgress(100);
         setStatus("done");
         setProgressText("");
@@ -142,7 +141,7 @@ export default function Home() {
       if (!files || files.length === 0) return;
       const file = files[0];
       const ext = file.name.split(".").pop()?.toLowerCase();
-      const validExts = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4"];
+      const validExts = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4", "mov", "mkv", "avi", "webm"];
 
       if (!validExts.includes(ext || "")) {
         setStatus("error");
@@ -217,12 +216,12 @@ export default function Home() {
                   오디오 파일을 끌어다 놓으세요
                 </p>
                 <p className="text-base text-gray-400">
-                  MP3, WAV, M4A, AAC, FLAC 지원
+                  MP3, WAV, M4A, FLAC, MP4, MOV 지원
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,.mov,.mkv,.avi,.webm"
                   className="hidden"
                   onChange={(e) => handleFile(e.target.files)}
                 />
